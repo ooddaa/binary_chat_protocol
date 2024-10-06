@@ -15,7 +15,7 @@ defmodule Chat.ProtocolTest do
       assert Protocol.decode_message(<<0x01, 0x00>>)== {:error, :incomplete, {{:decode_register, 1}, <<0x00>>}} 
     end
 
-    test "can decode broadcast messages" do
+    test "can decode Broadcast messages" do
       username = "oda"
       contents = "some funky stuff"
       binary = <<0x02, 0x00, 0x03, username::binary, 0x00, String.length(contents), contents::binary, "rest">>
@@ -61,6 +61,22 @@ defmodule Chat.ProtocolTest do
     test "returns :not_implemented for unknown message types" do
       msg = ""
       assert Protocol.encode_message(msg) == {:error, :not_implemented, {{:encode_message, 1}, msg}}
+    end
+  end
+  
+  describe "encode_message_io/1" do
+    test "can encode Register messages into iodata" do
+      msg = %Register{ username: "oda" }
+      iodata = Protocol.encode_message_io(msg) 
+        assert iodata == [1, <<0x00, 0x03, "oda">>] 
+        assert IO.iodata_to_binary(iodata) == <<0x01, 0x00, 0x03, "oda">> 
+    end
+    
+    test "can encode Broadcast messages into iodata" do
+      msg = %Broadcast{ username: "oda", contents: "elixir rocks" }
+      iodata = Protocol.encode_message_io(msg) 
+      assert iodata == [2, <<0x00, 0x03, "oda">>, <<0x00, 0x0c, "elixir rocks">>]
+      assert IO.iodata_to_binary(iodata) == <<0x02, 0x00, 0x03, "oda", 0x00, 0x0c, "elixir rocks">>
     end
   end
 end

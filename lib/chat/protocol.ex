@@ -2,8 +2,9 @@ defmodule Chat.Protocol do
   alias Chat.Messages.{Broadcast, Register}
 
   @type message() :: Broadcast.t() | Register.t()
+  @type metadata::{{atom(), non_neg_integer()}, any()} 
 
-  @spec encode_message(binary()) :: {:ok, message(), binary()} | {:error, :not_implemented, metadata()} | {:error, :incomplete, metadata()}
+  @spec decode_message(binary()) :: {:ok, message(), binary()} | {:error, :not_implemented, metadata()} | {:error, :incomplete, metadata()}
   def decode_message(<<0x01, rest::binary>>), do: decode_register(rest)
   def decode_message(<<0x02, rest::binary>>), do: decode_broadcast(rest)
   def decode_message(<<>>), do: {:error, :incomplete, {__ENV__.function, <<>>}}
@@ -17,7 +18,6 @@ defmodule Chat.Protocol do
   
   defp decode_broadcast(<<msg::binary>>), do: {:error, :incomplete, {__ENV__.function, msg}}
 
-  @type metadata::{{atom(), non_neg_integer()}, any()} 
   @spec encode_message(message()) :: {:ok, binary()} | {:error, :not_implemented, metadata()} | {:error, :incomplete, metadata()}
   def encode_message(%Register{} = msg), do: encode_register(msg)
   def encode_message(%Broadcast{} = msg), do: encode_broadcast(msg)
@@ -32,4 +32,23 @@ defmodule Chat.Protocol do
     <<0x02, byte_size(username)::size(16), username::binary, byte_size(contents)::size(16), contents::binary>>  
   end
   defp encode_broadcast(msg), do: {:error, :incomplete, {__ENV__.function, msg}}
+
+  # 
+  # More efficient
+  #
+  @spec encode_message_io(message()) :: iodata()
+  def encode_message_io(message)
+
+  def encode_message_io(%Register{} = msg) do 
+    [0x01, encode_string(msg.username)]
+  end
+  
+  def encode_message_io(%Broadcast{} = msg) do 
+    [0x02, encode_string(msg.username), encode_string(msg.contents)]
+  end
+
+  defp encode_string(str) do
+    <<byte_size(str)::16, str::binary>>
+  end
+    
 end
